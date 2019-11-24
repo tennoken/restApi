@@ -2,6 +2,7 @@ package com.example.example.repositoryTest;
 
 import com.example.example.ExampleApplicationTests;
 import com.example.example.model.entity.User;
+import com.example.example.model.enumclass.UserStatus;
 import com.example.example.repository.UserRepository;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -22,10 +23,11 @@ public class UserRepositoryTest extends ExampleApplicationTests {
 
 
     @Test
+    @Transactional
     public void create(){
         String account = "Test03";
         String password = "Test03";
-        String status = "Registered";
+        //String status = "Registered";
         String email = "Test01@gmail.com";
         String phoneNumber = "010-5555-3333";
         LocalDateTime registeredAt = LocalDateTime.now();
@@ -36,7 +38,7 @@ public class UserRepositoryTest extends ExampleApplicationTests {
 
         user.setAccount(account);
         user.setPassword(password);
-        user.setStatus(status);
+        user.setStatus(UserStatus.REGISTERED);
         user.setEmail(email);
         user.setPhoneNumber(phoneNumber);
         user.setRegisteredAt(registeredAt);

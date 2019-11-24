@@ -2,6 +2,7 @@ package com.example.example.repositoryTest;
 
 import com.example.example.ExampleApplicationTests;
 import com.example.example.model.entity.Item;
+import com.example.example.model.enumclass.ItemStatus;
 import com.example.example.repository.ItemRepository;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ public class ItemRepositoryTest extends ExampleApplicationTests {
     public void create(){
         Item item = new Item();
 
-        item.setStatus("Registered");
+        item.setStatus(ItemStatus.REGISTERED);
         item.setName("삼성 노트북");
         item.setTitle("노트북");
         item.setContent("SS-G12429");

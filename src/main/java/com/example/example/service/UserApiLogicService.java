@@ -2,6 +2,7 @@ package com.example.example.service;
 
 import com.example.example.ifs.CrudInterface;
 import com.example.example.model.entity.User;
+import com.example.example.model.enumclass.UserStatus;
 import com.example.example.model.network.Header;
 import com.example.example.model.network.request.UserApiRequest;
 import com.example.example.model.network.response.UserApiResponse;
@@ -32,7 +33,7 @@ public class UserApiLogicService implements CrudInterface<UserApiRequest, UserAp
         User user = User.builder()
                 .account(userApiRequest.getAccount())
                 .password(userApiRequest.getPassword())
-                .status("Registered")
+                .status(UserStatus.REGISTERED)
                 .phoneNumber(userApiRequest.getPhoneNumber())
                 .email(userApiRequest.getEmail())
                 .registeredAt(LocalDateTime.now())
@@ -82,7 +83,7 @@ public class UserApiLogicService implements CrudInterface<UserApiRequest, UserAp
                     .setRegisteredAt(userApiRequest.getRegisteredAt())
                     .setUnregisteredAt(userApiRequest.getUnregisteredAt());
             return user;
-        }).map(user -> userRepository.save(user)) // update -> newUser
+        }).map(changeUser -> userRepository.save(changeUser)) // update -> newUser
                 .map(newUser-> response(newUser)) // 4. userApiResponse
                 .orElseGet(()-> Header.ERROR("데이터 없음"));
 
