@@ -1,23 +1,34 @@
 package com.example.example.service;
 
 import com.example.example.ifs.CrudInterface;
+import com.example.example.model.entity.OrderGroup;
 import com.example.example.model.entity.User;
 import com.example.example.model.enumclass.UserStatus;
 import com.example.example.model.network.Header;
 import com.example.example.model.network.request.UserApiRequest;
+import com.example.example.model.network.response.ItemApiResponse;
+import com.example.example.model.network.response.OrderGroupApiResponse;
 import com.example.example.model.network.response.UserApiResponse;
+import com.example.example.model.network.response.UserOrderInfoApiResponse;
 import com.example.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
-public class UserApiLogicService implements CrudInterface<UserApiRequest, UserApiResponse> {
+public class UserApiLogicService extends BaseService<UserApiRequest, UserApiResponse, User> {
 
     @Autowired
-    private UserRepository userRepository;
+    private OrderGroupApiLogicService orderGroupApiLogicService;
+
+    @Autowired
+    private ItemApiLogicService itemApiLogicService;
 
     // 1. request data
     // 2. user 생성
@@ -39,24 +50,26 @@ public class UserApiLogicService implements CrudInterface<UserApiRequest, UserAp
                 .registeredAt(LocalDateTime.now())
                 .build();
 
-        User newUser = userRepository.save(user);
+        User newUser = baseRepository.save(user);
 
         // 3. 생성된 user -> UserApiResponse return
 
 
-        return response(newUser);
+        return Header.OK(response(newUser));
     }
 
     @Override
     public Header<UserApiResponse> read(Long id) {
 
         // id -> repository getOne, getById
-        Optional<User> optionalUser = userRepository.findById(id);
+        Optional<User> optionalUser = baseRepository.findById(id);
 
         // user -> userApiResponse return
 
         return optionalUser
                 .map(user -> response(user))
+                // .map(userApiResponse -> Header.OK(userApiResponse))
+                .map(Header::OK)
                 .orElseGet(
                         () -> Header.ERROR("데이터 없음")
                 );
@@ -72,7 +85,7 @@ public class UserApiLogicService implements CrudInterface<UserApiRequest, UserAp
         UserApiRequest userApiRequest = request.getData();
 
         // 2. id -> data 찾고
-        Optional<User> optionalUser = userRepository.findById(userApiRequest.getId());
+        Optional<User> optionalUser = baseRepository.findById(userApiRequest.getId());
 
         return optionalUser.map(user -> {
             user.setAccount(userApiRequest.getAccount())
@@ -83,8 +96,9 @@ public class UserApiLogicService implements CrudInterface<UserApiRequest, UserAp
                     .setRegisteredAt(userApiRequest.getRegisteredAt())
                     .setUnregisteredAt(userApiRequest.getUnregisteredAt());
             return user;
-        }).map(changeUser -> userRepository.save(changeUser)) // update -> newUser
+        }).map(changeUser -> baseRepository.save(changeUser)) // update -> newUser
                 .map(newUser-> response(newUser)) // 4. userApiResponse
+                .map(userApiResponse -> Header.OK(userApiResponse))
                 .orElseGet(()-> Header.ERROR("데이터 없음"));
 
     }
@@ -93,18 +107,18 @@ public class UserApiLogicService implements CrudInterface<UserApiRequest, UserAp
     public Header delete(Long id) {
 
         // 1. id -> repository -> user
-        Optional<User> optionalUser = userRepository.findById(id);
+        Optional<User> optionalUser = baseRepository.findById(id);
 
         // 2. repository -> delete
         return optionalUser.map(user ->{
-            userRepository.delete(user);
+            baseRepository.delete(user);
             return Header.OK();
         }).
                 orElseGet(()->Header.ERROR("데이터 없음"));
 
     }
 
-    private Header<UserApiResponse> response(User user){
+    private UserApiResponse response(User user){
         // user -> userApiResponse
         UserApiResponse userApiResponse = UserApiResponse.builder()
                 .id(user.getId())
@@ -117,7 +131,56 @@ public class UserApiLogicService implements CrudInterface<UserApiRequest, UserAp
                 .unregisteredAt(user.getUnregisteredAt())
                 .build();
 
-        return Header.OK(userApiResponse);
+        return userApiResponse;
 
+    }
+
+    public Header<List<UserApiResponse>> search(Pageable pageable){
+        Page<User> users = baseRepository.findAll(pageable);
+
+        List<UserApiResponse> userApiResponseList = users.stream()
+                .map(user -> response(user))
+                .collect(Collectors.toList());
+
+        // List<UserApiResponse>
+
+        //Header<List<UserApiResponse>>
+
+        return Header.OK(userApiResponseList);
+    }
+
+    @Override
+    public Header<UserOrderInfoApiResponse> orderInfo(Long id) {
+
+        // user
+        User user = baseRepository.getOne(id);
+        UserApiResponse userApiResponse = response(user);
+
+        // orderGroup
+
+        List<OrderGroup> orderGroupList = user.getOrderGroupList();
+        List<OrderGroupApiResponse> orderGroupApiResponseList = orderGroupList.stream()
+                .map(orderGroup -> {
+
+                    OrderGroupApiResponse orderGroupApiResponse = orderGroupApiLogicService.response(orderGroup).getData();
+
+                    List<ItemApiResponse> itemApiResponseList = orderGroup.getOrderDetailList().stream()
+                            .map(detail -> detail.getItem())
+                            .map(item -> itemApiLogicService.response(item).getData())
+                            .collect(Collectors.toList());
+
+
+                    orderGroupApiResponse.setItemApiResponseList(itemApiResponseList);
+                    return orderGroupApiResponse;
+                }).collect(Collectors.toList());
+
+        userApiResponse.setOrderGroupApiResponseList(orderGroupApiResponseList);
+
+        UserOrderInfoApiResponse userOrderInfoApiResponse = UserOrderInfoApiResponse.builder()
+                .userApiResponse(userApiResponse)
+                .build()
+                ;
+
+        return Header.OK(userOrderInfoApiResponse);
     }
 }

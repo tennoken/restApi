@@ -27,7 +27,7 @@ public class UserRepositoryTest extends ExampleApplicationTests {
     public void create(){
         String account = "Test03";
         String password = "Test03";
-        //String status = "Registered";
+        UserStatus status = UserStatus.REGISTERED;
         String email = "Test01@gmail.com";
         String phoneNumber = "010-5555-3333";
         LocalDateTime registeredAt = LocalDateTime.now();
